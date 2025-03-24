@@ -1,0 +1,521 @@
+Turbo Assembler	 Version 4.1	    03/02/25 12:23:37	    Page 1
+frame.asm
+
+
+
+      1				     ;------------------------------------------------------------------------------
+      2				     ;					 Make a	frame
+      3				     ;------------------------------------------------------------------------------
+      4
+      5	0000			     .model tiny
+      6	0000			     .data
+      7	0000  7F 7F*(??)				     InpArray		     db	127, 127 dup(?)
+      8
+      9	0080  C9 CB BB CC 20 B9	C8+			     FrameMassive    db	0c9h, 0cbh, 0bbh, 0cch,	' ', 0b9h, 0c8h, 0cah, 0bch,
+     10	      CA BC ??
+*Warning* frame.asm(9) Missing operand - trailing ? assumed
+     11	008A  03 03 03 03 20 03	03+							     db	03h, 03h, 03h, 03h, ' ', 03h, 03h,  +
+     12	      03 03 ??		     03h, 03h,
+*Warning* frame.asm(10)	Missing	operand	- trailing ? assumed
+     13	0094  31 32 33 34 20 36	37+							     db	'1234 6789',
+     14	      38 39 ??
+*Warning* frame.asm(11)	Missing	operand	- trailing ? assumed
+     15	009E  78 79 69 49 20 49	6C+							     db	'xyiI Iloh'
+     16	      6F 68
+     17
+     18				     ;------------------------------------------------------------------------------
+     19				     ;					     CONSTANTS
+     20				     ;------------------------------------------------------------------------------
+     21
+     22	      =B800		     VIDEO_MEM				     equ 0b800h
+     23	      =00A0		     SCREEN_LENGHT_IN_MEM    equ 160
+     24	      =000A		     LENGHT_OF_FRAME_MASSIVE equ 10
+     25	      =000B		     CENTER_OF_SCREEN_CLMN   equ 11
+     26	      =0019		     SCREEN_HIGHT_IN_VISUAL  equ 25
+     27				     ;-----------------------------------------------------------------------------
+     28
+     29	00A7			     .code
+     30
+     31				     org 100h
+     32
+     33	0100			     Start:
+     34	0100  FC					     cld
+     35
+     36	0101  E8 0007					     call DataTaker
+     37	0104  E8 0050					     call Dispatcher
+     38
+     39	0107  B4 4C					     mov ah, 4ch
+     40	0109  CD 21					     int 21h
+     41
+     42				     ;-----------------------------------------------------------------------------
+     43				     ;							     DATA TAKER
+     44				     ;Enrty:
+     45				     ;Retrn: BH	- hight
+     46				     ;		     BL	- lenght
+     47				     ;		     DH	- frame	color
+     48				     ;		     DL	- text color
+     49				     ;		     DI	- addres of text massive
+     50				     ;		     SI	- addres of frame chars
+     51				     ;Destr: AX, BX, DX, DI, SI
+     52				     ;-----------------------------------------------------------------------------
+     53	010B			     DataTaker	     proc
+     54
+Turbo Assembler	 Version 4.1	    03/02/25 12:23:37	    Page 2
+frame.asm
+
+
+
+     55	010B  B4 0A					     mov ah, 0ah
+     56	010D  BA 0000r					     lea dx, InpArray
+     57	0110  CD 21					     int 21h
+     58
+     59	0112  8B FA					     mov di, dx
+     60	0114  83 C7 02					     add di, 2
+     61
+     62	0117  E8 00A7					     call AtoiDec				     ; take lenght
+     63	011A  53					     push bx
+     64
+     65	011B  E8 00A3					     call AtoiDec				     ; take hight
+     66	011E  53					     push bx
+     67
+     68	011F  E8 00C3					     call AtoiHex				     ; take color of text
+     69	0122  53					     push bx
+     70
+     71	0123  E8 00BF					     call AtoiHex				     ; take color of frame
+     72	0126  53					     push bx
+     73
+     74	0127  E8 0097					     call AtoiDec				     ; take num	of frame
+     75
+     76	012A  83 FB 00					     cmp bx, 0						     ; switch to    +
+     77				     frames
+     78	012D  74 14					     je	UsersFrame
+     79
+     80	012F  B8 0080r					     lea ax, FrameMassive
+     81	0132  8B F0					     mov si, ax
+     82
+     83	0134  8B C3					     mov ax, bx
+     84	0136  2D 0001					     sub ax, 1
+     85	0139  BB 000A					     mov bx, LENGHT_OF_FRAME_MASSIVE
+     86	013C  F7 E3					     mul bx
+     87	013E  03 F0					     add si, ax
+     88
+     89	0140  EB 09 90					     jmp EndOfFunc
+     90
+     91	0143					     UsersFrame:
+     92	0143  83 C7 01					     add di, 1
+     93
+     94	0146  8B F7					     mov si, di							     ;	    +
+     95				     address of	users frame
+     96
+     97	0148  83 C7 0B					     add di, LENGHT_OF_FRAME_MASSIVE + 1
+     98
+     99	014B					     EndOfFunc:
+    100	014B  83 C7 01					     add di, 1
+    101
+    102	014E  58					     pop ax
+    103
+    104	014F  5A					     pop dx
+    105	0150  8A F0					     mov dh, al
+    106
+    107	0152  58					     pop ax
+    108
+    109	0153  5B					     pop bx
+    110	0154  8A F8					     mov bh, al
+    111
+Turbo Assembler	 Version 4.1	    03/02/25 12:23:37	    Page 3
+frame.asm
+
+
+
+    112	0156  C3					     ret
+    113	0157						     endp
+    114
+    115
+    116
+    117				     ;-----------------------------------------------------------------------------
+    118				     ;							     DISPATCHER
+    119				     ;Entry:	     BH	- hight
+    120				     ;		     BL	- lenght
+    121				     ;		     DH	- frame	color
+    122				     ;		     DL	- text color
+    123				     ;		     DI	- addres of text massive
+    124				     ;		     SI	- addres of frame chars
+    125				     ;Retrn:	     none
+    126				     ;Destr:	     AX, BX, CX, DX, ES, SI, di	     ---- REFACTOR ----
+    127				     ;------------------------------------------------------------------------------
+    128
+    129	0157			     Dispatcher	     proc
+    130
+    131	0157  57					     push di								    +
+    132				     ; save addres of text massive
+    133
+    134	0158  E8 00CD					     call TakeFrameCoordinate				     ; ax - coords
+    135
+    136	015B  B8 B800					     mov ax, VIDEO_MEM
+    137	015E  8E C0					     mov es, ax
+    138	0160  33 C0					     xor ax, ax
+    139	0162  8A E6					     mov ah, dh
+    140
+    141	0164  57					     push di
+    142
+    143	0165  8A CB					     mov cl, bl
+    144
+    145	0167  E8 0026					     call DrawOneLine						     ;	    +
+    146				     DrawLine
+    147
+    148	016A  5F					     pop di
+    149	016B  81 C7 00A0				     add di, SCREEN_LENGHT_IN_MEM		     ; magic number
+    150
+    151	016F  8A CF					     mov cl, bh
+    152
+    153				     ;		     ----------------------------------------
+    154	0171					     StartDrawing:
+    155	0171  57					     push di
+    156	0172  51					     push cx
+    157
+    158	0173  8A CB					     mov cl, bl
+    159
+    160	0175  E8 0018					     call DrawOneLine
+    161
+    162	0178  59					     pop cx
+    163	0179  83 EE 03					     sub si, 3
+    164	017C  5F					     pop di
+    165	017D  81 C7 00A0				     add di, SCREEN_LENGHT_IN_MEM
+    166
+    167	0181  E2 EE					     loop StartDrawing
+    168				     ;		     ----------------------------------------
+Turbo Assembler	 Version 4.1	    03/02/25 12:23:37	    Page 4
+frame.asm
+
+
+
+    169
+    170	0183  83 C6 03					     add si, 3
+    171	0186  8A CB					     mov cl, bl
+    172
+    173	0188  E8 0005					     call DrawOneLine
+    174
+    175	018B  5F					     pop di								    +
+    176				     ; take the	address	of text	massive
+    177
+    178	018C  E8 0009					     call WriteAText
+    179
+    180	018F  C3					     ret
+    181	0190						     endp
+    182
+    183				     ;------------------------------------------------------------------------------
+    184				     ;							     DRAW ONE LINE
+    185				     ;NOTE!  ES	must be	b800!
+    186				     ;
+    187				     ;Entry:
+    188				     ;		     CX	- lenght of frame
+    189				     ;		     AH	- color	of frame
+    190				     ;		     SI	- addres of char massive
+    191				     ;		     DI	- coordinates
+    192				     ;
+    193				     ;Retrn: none
+    194				     ;Destr: CX, SI, di
+    195				     ;------------------------------------------------------------------------------
+    196	0190			     DrawOneLine     proc
+    197
+    198	0190  AC					     lodsb						     ; add first    +
+    199				     symbol
+    200	0191  AB					     stosw						     ; move into    +
+    201				     graphic mem
+    202
+    203	0192  AC					     lodsb						     ; take new	    +
+    204				     symbol
+    205
+    206	0193  F3> AB					     rep stosw						     ; mul them	into+
+    207				     graphic mem
+    208
+    209	0195  AC					     lodsb						     ; add last	    +
+    210				     symbol
+    211	0196  AB					     stosw						     ; move into    +
+    212				     graphic mem
+    213
+    214	0197  C3					     ret
+    215	0198						     endp
+    216				     ;------------------------------------------------------------------------------
+    217
+    218				     ;------------------------------------------------------------------------------
+    219				     ;							     WRITE A TEXT
+    220				     ;Entry: DL	- text color
+    221				     ;		     DH	- lenght of frame
+    222				     ;			     DI	- addres of text massive
+    223				     ;Retrn:	     none
+    224				     ;Destr:	     AX, CX, DX, DI, SI
+    225				     ;------------------------------------------------------------------------------
+Turbo Assembler	 Version 4.1	    03/02/25 12:23:37	    Page 5
+frame.asm
+
+
+
+    226
+    227	0198			     WriteAText	 proc
+    228
+    229	0198  57					     push di
+    230	0199  E8 0079					     call Strlen
+    231	019C  5E					     pop si
+    232
+    233	019D  E8 000C					     call TakeCoordinatesOfText
+    234
+    235	01A0  B8 B800					     mov ax, VIDEO_MEM
+    236	01A3  8E C0					     mov es, ax
+    237
+    238	01A5  8A E2					     mov ah, dl
+    239				     ;		     ----------------------------------------
+    240	01A7					     Print:
+    241	01A7  AC					     lodsb							     ; si - +
+    242				     text massive
+    243	01A8  AB					     stosw							     ; di
+    244
+    245	01A9  E2 FC					     loop Print
+    246				     ;		     ----------------------------------------
+    247
+    248	01AB  C3					     ret
+    249	01AC						     endp
+    250
+    251				     ;------------------------------------------------------------------------------
+    252				     ;							     TAKE COORDINATES OF TEXT
+    253				     ;Entry:	     CX	- lenght of text
+    254				     ;Retrn:	     DI	- address of text
+    255				     ;Destr:	     BX, DI
+    256				     ;------------------------------------------------------------------------------
+    257	01AC			     TakeCoordinatesOfText   proc
+    258
+    259	01AC  BF 06E0					     mov di, SCREEN_LENGHT_IN_MEM * CENTER_OF_SCREEN_CLMN
+    260
+    261	01AF  BB 0050					     mov bx, SCREEN_LENGHT_IN_MEM / 2
+    262	01B2  2B D9					     sub bx, cx
+    263	01B4  83 C3 04					     add bx, 4
+    264	01B7  D1 EB					     shr bx, 1
+    265	01B9  D1 E3					     shl bx, 1
+    266
+    267	01BB  03 FB					     add di, bx
+    268	01BD  83 EF 02					     sub di, 2
+    269
+    270	01C0  C3					     ret
+    271	01C1						     endp
+    272
+    273				     ;------------------------------------------------------------------------------
+    274				     ;							     ATOI DEC (char to dec)
+    275				     ;Entry:	     DI	- addres of symbols
+    276				     ;Retrn:	     BX	- number
+    277				     ;Destr:	     AX, DI, SI, ES
+    278				     ;------------------------------------------------------------------------------
+    279	01C1			     AtoiDec proc
+    280	01C1  33 DB				     xor bx, bx
+    281
+    282	01C3  8C D8				     mov ax, ds
+Turbo Assembler	 Version 4.1	    03/02/25 12:23:37	    Page 6
+frame.asm
+
+
+
+    283	01C5  8E C0				     mov es, ax
+    284
+    285	01C7  8B F7				     mov si, di
+    286	01C9  83 C7 01				     add di, 1
+    287
+    288				     ;		     ----------------------------------------
+    289	01CC					     Cycle:
+    290	01CC  8B C3					     mov ax, bx					     ; mul 10
+    291	01CE  D1 E3 D1 E3 D1 E3				     shl bx, 3
+    292	01D4  D1 E0					     shl ax, 1
+    293	01D6  03 D8					     add bx, ax
+    294
+    295	01D8  AC					     lodsb
+    296	01D9  2D 0030					     sub ax, '0'
+    297	01DC  03 D8					     add bx, ax
+    298
+    299	01DE  B8 0020					     mov ax, ' '
+    300	01E1  AE					     scasb
+    301	01E2  75 E8					     jne Cycle
+    302				     ;		     ----------------------------------------
+    303
+    304	01E4  C3				     ret
+    305	01E5					     endp
+    306				     ;------------------------------------------------------------------------------
+    307				     ;							     ATOI HEX
+    308				     ;Entry:	     DI	- addres of symbols
+    309				     ;Retrn:	     BX	- number
+    310				     ;Destr:	     AX, DI, SI, ES
+    311				     ;------------------------------------------------------------------------------
+    312	01E5			     AtoiHex proc
+    313	01E5  33 DB				     xor bx, bx
+    314
+    315	01E7  8C D8				     mov ax, ds
+    316	01E9  8E C0				     mov es, ax
+    317
+    318	01EB  8B F7				     mov si, di
+    319	01ED  83 C7 01				     add di, 1
+    320
+    321				     ;		     ----------------------------------------
+    322	01F0				     TakeNum:
+    323	01F0  D1 E3 D1 E3 D1 E3	D1+		     shl bx, 4
+    324	      E3
+    325
+    326	01F8  33 C0				     xor ax, ax
+    327	01FA  AC				     lodsb
+    328	01FB				     NUM:
+    329	01FB  3D 0061				     cmp ax, 'a'
+    330	01FE  73 06				     jae hex
+    331	0200  2D 0030				     sub ax, '0'
+    332	0203  EB 07 90				     jmp RES
+    333
+    334	0206				     HEX:
+    335	0206  2D 0061				     sub ax, 'a'
+    336	0209  05 000B				     add ax, LENGHT_OF_FRAME_MASSIVE + 1
+    337
+    338	020C				     RES:
+    339	020C  03 D8				     add bx, ax
+Turbo Assembler	 Version 4.1	    03/02/25 12:23:37	    Page 7
+frame.asm
+
+
+
+    340
+    341	020E  B8 0020				     mov ax, ' '
+    342	0211  AE				     scasb
+    343	0212  75 DC				     jne TakeNum
+    344				     ;		     ----------------------------------------
+    345
+    346	0214  C3				     ret
+    347	0215					     endp
+    348
+    349				     ;------------------------------------------------------------------------------
+    350				     ;							     STRLEN
+    351				     ;Entry:	     DI	- address of string
+    352				     ;Retrn:	     CX	- lenght
+    353				     ;Destr:	     AX, CX, DI, ES
+    354				     ;
+    355				     ;------------------------------------------------------------------------------
+    356	0215			     Strlen proc
+    357	0215  8C D8					     mov ax, ds
+    358	0217  8E C0					     mov es, ax
+    359
+    360	0219  33 C0					     xor ax, ax
+    361	021B  33 C9					     xor cx, cx
+    362	021D  49					     dec cx
+    363
+    364	021E  B0 24					     mov al, '$'
+    365
+    366	0220  F2> AE					     repne scasb
+    367
+    368	0222  F7 D9					     neg cx
+    369	0224  83 E9 02					     sub cx, 2
+    370
+    371	0227  C3					     ret
+    372	0228						     endp
+    373				     ;------------------------------------------------------------------------------
+    374
+    375				     ;------------------------------------------------------------------------------
+    376				     ;							     TAKE COORDINATES
+    377				     ;Entry:	     BL	- lenght of frame
+    378				     ;		     BH	- hight	of frame
+    379				     ;Retrn:	     DI	- coordinate
+    380				     ;Destr:	     AX, BX, CX, DI
+    381				     ;
+    382				     ;------------------------------------------------------------------------------
+    383	0228			     TakeFrameCoordinate     proc
+    384
+    385	0228  33 C9					     xor cx, cx
+    386
+    387	022A  B8 0019					     mov ax, SCREEN_HIGHT_IN_VISUAL
+    388	022D  2A C7					     sub al, bh
+    389	022F  2D 0002					     sub ax, 2
+    390	0232  D1 E8					     shr ax, 1
+    391	0234  8B C8					     mov cx, ax
+    392	0236  D1 E0 D1 E0 D1 E0	D1+			     shl ax, 5
+    393	      E0 D1 E0
+    394	0240  D1 E1 D1 E1 D1 E1				     shl cx, 3
+    395	0246  03 C1					     add ax, cx
+    396	0248  D1 E0 D1 E0				     shl ax, 2
+Turbo Assembler	 Version 4.1	    03/02/25 12:23:37	    Page 8
+frame.asm
+
+
+
+    397
+    398	024C  B9 0050					     mov cx, SCREEN_LENGHT_IN_MEM / 2
+    399	024F  2A CB					     sub cl, bl
+    400	0251  D1 E9					     shr cx, 1
+    401	0253  D1 E1					     shl cx, 1
+    402
+    403	0255  03 C1					     add ax, cx
+    404
+    405	0257  2D 0002					     sub ax, 2
+    406
+    407	025A  8B F8					     mov di, ax
+    408
+    409	025C  C3					     ret
+    410	025D						     endp
+    411				     ;------------------------------------------------------------------------------
+    412
+    413				     end Start
+Turbo Assembler	 Version 4.1	    03/02/25 12:23:37	    Page 9
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "03/02/25"
+??FILENAME			  Text	 "frame	  "
+??TIME				  Text	 "12:23:37"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 FRAME
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+ATOIDEC				  Near	 DGROUP:01C1
+ATOIHEX				  Near	 DGROUP:01E5
+CENTER_OF_SCREEN_CLMN		  Number 000B
+CYCLE				  Near	 DGROUP:01CC
+DATATAKER			  Near	 DGROUP:010B
+DISPATCHER			  Near	 DGROUP:0157
+DRAWONELINE			  Near	 DGROUP:0190
+ENDOFFUNC			  Near	 DGROUP:014B
+FRAMEMASSIVE			  Byte	 DGROUP:0080
+HEX				  Near	 DGROUP:0206
+INPARRAY			  Byte	 DGROUP:0000
+LENGHT_OF_FRAME_MASSIVE		  Number 000A
+NUM				  Near	 DGROUP:01FB
+PRINT				  Near	 DGROUP:01A7
+RES				  Near	 DGROUP:020C
+SCREEN_HIGHT_IN_VISUAL		  Number 0019
+SCREEN_LENGHT_IN_MEM		  Number 00A0
+START				  Near	 DGROUP:0100
+STARTDRAWING			  Near	 DGROUP:0171
+STRLEN				  Near	 DGROUP:0215
+TAKECOORDINATESOFTEXT		  Near	 DGROUP:01AC
+TAKEFRAMECOORDINATE		  Near	 DGROUP:0228
+TAKENUM				  Near	 DGROUP:01F0
+USERSFRAME			  Near	 DGROUP:0143
+VIDEO_MEM			  Number B800
+WRITEATEXT			  Near	 DGROUP:0198
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  00A7 Word	  Public  DATA
+  _TEXT				  16  025D Word	  Public  CODE
+Turbo Assembler	 Version 4.1	    03/02/25 12:23:37	    Page 10
+Error Summary
+
+
+
+*Warning* frame.asm(9) Missing operand - trailing ? assumed
+*Warning* frame.asm(10)	Missing	operand	- trailing ? assumed
+*Warning* frame.asm(11)	Missing	operand	- trailing ? assumed
+
