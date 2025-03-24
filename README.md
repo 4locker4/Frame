@@ -20,6 +20,9 @@ The command must be entered from the terminal, here are its arguments sequential
 
 Press enter and enjoy!!!
 
+![image](https://github.com/user-attachments/assets/0402bcc9-2dc0-4cf6-ac32-7c6bfba16f48)
+
+
 ### Regs
 
 It shows all values in registers in current moment. 
